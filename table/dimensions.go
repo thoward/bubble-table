@@ -71,3 +71,47 @@ func updateColumnWidths(cols []Column, totalWidth int) {
 		cols[index].style = cols[index].style.Width(width)
 	}
 }
+
+func (m *Model) recalculateHeight() {
+	var verticalChromeHeight int
+
+	if m.headerVisible {
+		verticalChromeHeight += 3
+	}
+
+	if m.hasFooter() {
+		verticalChromeHeight += 2
+	}
+
+	// this accounts for the border at the bottom
+	// when there's no footer
+	verticalChromeHeight++
+
+	m.maxVisibleRows = m.maxTotalHeight - verticalChromeHeight
+	m.verticalScrollWindowStart = m.rowCursorIndex
+
+	var newEnd = m.rowCursorIndex + m.maxVisibleRows - 1
+	var lastRowIndex = m.TotalRows()
+
+	if newEnd > lastRowIndex {
+		m.verticalScrollWindowEnd = lastRowIndex - m.verticalScrollWindowStart - 1
+	} else {
+		m.verticalScrollWindowEnd = m.rowCursorIndex + min(m.maxVisibleRows, lastRowIndex) - 1
+	}
+
+	m.verticalScrollWindowYOffset = 0
+}
+
+func (m *Model) SetMaxTotalHeight(maxTotalHeight int) {
+	// turn off paginated mode
+	m.pageSize = 0
+	m.rowCursorIndex = 0
+	m.maxTotalHeight = maxTotalHeight
+	m.recalculateHeight()
+}
+
+func (m *Model) SetMaxTotalWidth(maxTotalWidth int) {
+	m.maxTotalWidth = maxTotalWidth
+
+	m.recalculateWidth()
+}

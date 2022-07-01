@@ -14,6 +14,8 @@ var (
 	defaultHighlightStyle = lipgloss.NewStyle().Background(lipgloss.Color("#334"))
 )
 
+type DynamicFooterFunc func(m Model) string
+
 // Model is the main table model.  Create using New().
 type Model struct {
 	// Data
@@ -46,6 +48,7 @@ type Model struct {
 	// Footers
 	footerVisible bool
 	staticFooter  string
+	dynamicFooter DynamicFooterFunc
 
 	// Pagination
 	pageSize           int
@@ -65,6 +68,17 @@ type Model struct {
 
 	// The maximum total width for overflow/scrolling
 	maxTotalWidth int
+
+	// The maximum total allowed height for the table
+	maxTotalHeight int
+
+	// The maximum rows that can be visible, given maxTotalHeight
+	maxVisibleRows int
+
+	// The start/end/cursor offsets of the current visible window of rows, given maxTotalHeight
+	verticalScrollWindowStart   int
+	verticalScrollWindowEnd     int
+	verticalScrollWindowYOffset int
 
 	// Internal cached calculations for reference, may be higher than
 	// maxTotalWidth.  If this is the case, we need to adjust the view

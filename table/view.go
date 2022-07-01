@@ -30,8 +30,10 @@ func (m Model) View() string {
 		rowStrs = append(rowStrs, split[0])
 	}
 
-	for i := startRowIndex; i <= endRowIndex; i++ {
-		rowStrs = append(rowStrs, m.renderRow(i, i == endRowIndex))
+	if m.TotalRows() > 0 {
+		for i := startRowIndex; i <= endRowIndex; i++ {
+			rowStrs = append(rowStrs, m.renderRow(i, i == endRowIndex))
+		}
 	}
 
 	var footer string
