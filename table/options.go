@@ -144,6 +144,21 @@ func (m Model) StartFilterTyping() Model {
 func (m Model) WithStaticFooter(footer string) Model {
 	m.staticFooter = footer
 
+	if m.maxTotalHeight > 0 {
+		m.recalculateHeight()
+	}
+
+	return m
+}
+
+// WithStaticFooter adds a footer that only displays the given text.
+func (m Model) WithDynamicFooter(f DynamicFooterFunc) Model {
+	m.dynamicFooter = f
+
+	if m.maxTotalHeight > 0 {
+		m.recalculateHeight()
+	}
+
 	return m
 }
 
@@ -278,8 +293,8 @@ func (m Model) WithColumns(columns []Column) Model {
 // WithFilterInput makes the table use the provided text input bubble for
 // filtering rather than using the built-in default.  This allows for external
 // text input controls to be used.
-func (m Model) WithFilterInput(input textinput.Model) Model {
-	m.filterTextInput = input
+func (m Model) WithFilterInput(input *textinput.Model) Model {
+	m.filterTextInput = *input
 
 	return m
 }
@@ -287,6 +302,10 @@ func (m Model) WithFilterInput(input textinput.Model) Model {
 // WithFooterVisibility sets the visibility of the footer.
 func (m Model) WithFooterVisibility(visibility bool) Model {
 	m.footerVisible = visibility
+
+	if m.maxTotalHeight > 0 {
+		m.recalculateHeight()
+	}
 
 	return m
 }
@@ -332,6 +351,17 @@ func (m Model) ScrollRight() Model {
 func (m Model) ScrollLeft() Model {
 	m.scrollLeft()
 
+	return m
+}
+
+// WithMaxTotalHeight sets the maximum total height that the table should render.
+// If this height is exceeded by either the target height or by the total height
+// of all the rows (including borders!), anything extra will be treated as
+// overflow and vertical scrolling will be used to see the rest.
+func (m Model) WithMaxTotalHeight(maxTotalHeight int) Model {
+	m.pageSize = 0
+	m.maxTotalHeight = maxTotalHeight
+	m.recalculateHeight()
 	return m
 }
 

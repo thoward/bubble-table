@@ -30,13 +30,19 @@ func (m *Model) TotalRows() int {
 // VisibleIndices returns the current visible rows by their 0 based index.
 // Useful for custom pagination footers.
 func (m *Model) VisibleIndices() (start, end int) {
-	totalRows := len(m.GetVisibleRows())
+	totalRows := m.TotalRows()
 
-	if m.pageSize == 0 {
+	// this is the vertically "unrestrained" view
+	if m.pageSize == 0 && m.maxTotalHeight == 0 {
 		start = 0
 		end = totalRows - 1
 
 		return start, end
+	}
+
+	// if paging is turned off and vertical scrolling within a fixed height is on
+	if m.pageSize == 0 && m.maxTotalHeight > 0 {
+		return m.verticalScrollWindowStart, m.verticalScrollWindowEnd
 	}
 
 	start = m.pageSize * m.currentPage
@@ -50,7 +56,7 @@ func (m *Model) VisibleIndices() (start, end int) {
 }
 
 func (m *Model) pageDown() {
-	if m.pageSize == 0 || len(m.GetVisibleRows()) <= m.pageSize {
+	if m.pageSize == 0 || m.TotalRows() <= m.pageSize || m.maxTotalHeight != 0 {
 		return
 	}
 
@@ -70,7 +76,7 @@ func (m *Model) pageDown() {
 }
 
 func (m *Model) pageUp() {
-	if m.pageSize == 0 || len(m.GetVisibleRows()) <= m.pageSize {
+	if m.pageSize == 0 || m.TotalRows() <= m.pageSize || m.maxTotalHeight != 0 {
 		return
 	}
 
@@ -90,11 +96,17 @@ func (m *Model) pageUp() {
 }
 
 func (m *Model) pageFirst() {
+	if m.maxTotalHeight != 0 {
+		return
+	}
 	m.currentPage = 0
 	m.rowCursorIndex = 0
 }
 
 func (m *Model) pageLast() {
+	if m.maxTotalHeight != 0 {
+		return
+	}
 	m.currentPage = m.MaxPages() - 1
 	m.rowCursorIndex = m.currentPage * m.pageSize
 }

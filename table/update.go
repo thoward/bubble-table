@@ -7,22 +7,62 @@ import (
 
 func (m *Model) moveHighlightUp() {
 	m.rowCursorIndex--
-
+	var wrapped bool
+	var lastRowIndex int
 	if m.rowCursorIndex < 0 {
-		m.rowCursorIndex = len(m.GetVisibleRows()) - 1
+		lastRowIndex = m.TotalRows() - 1
+		m.rowCursorIndex = lastRowIndex
+		wrapped = true
 	}
 
-	m.currentPage = m.expectedPageForRowIndex(m.rowCursorIndex)
+	if m.pageSize > 0 {
+		m.currentPage = m.expectedPageForRowIndex(m.rowCursorIndex)
+	}
+
+	currentWindowHeight := min(m.maxVisibleRows, m.TotalRows())
+	if m.maxTotalHeight > 0 {
+		m.verticalScrollWindowYOffset--
+		if m.verticalScrollWindowYOffset < 0 {
+			if wrapped {
+				m.verticalScrollWindowStart = lastRowIndex - currentWindowHeight + 1
+				m.verticalScrollWindowEnd = lastRowIndex
+				m.verticalScrollWindowYOffset = currentWindowHeight - 1
+			} else {
+				m.verticalScrollWindowStart--
+				m.verticalScrollWindowEnd--
+				m.verticalScrollWindowYOffset = 0
+			}
+		}
+	}
 }
 
 func (m *Model) moveHighlightDown() {
 	m.rowCursorIndex++
+	var wrapped bool
 
-	if m.rowCursorIndex >= len(m.GetVisibleRows()) {
+	if m.rowCursorIndex >= m.TotalRows() {
 		m.rowCursorIndex = 0
+		wrapped = true
 	}
 
-	m.currentPage = m.expectedPageForRowIndex(m.rowCursorIndex)
+	if m.pageSize > 0 {
+		m.currentPage = m.expectedPageForRowIndex(m.rowCursorIndex)
+	}
+	currentWindowHeight := min(m.maxVisibleRows, m.TotalRows())
+	if m.maxTotalHeight > 0 {
+		m.verticalScrollWindowYOffset++
+		if m.verticalScrollWindowYOffset > (currentWindowHeight - 1) {
+			if wrapped {
+				m.verticalScrollWindowStart = 0
+				m.verticalScrollWindowEnd = currentWindowHeight - 1
+				m.verticalScrollWindowYOffset = 0
+			} else {
+				m.verticalScrollWindowStart++
+				m.verticalScrollWindowEnd++
+				m.verticalScrollWindowYOffset = currentWindowHeight - 1
+			}
+		}
+	}
 }
 
 func (m *Model) toggleSelect() {
@@ -47,14 +87,31 @@ func (m *Model) toggleSelect() {
 
 func (m Model) updateFilterTextInput(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
+	var reset bool
+	var blurred bool
+	prevTotalRows := m.TotalRows()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, m.keyMap.FilterBlur) {
 			m.filterTextInput.Blur()
+			blurred = true
+		}
+		if key.Matches(msg, m.keyMap.FilterClear) {
+			reset = true
 		}
 	}
 	m.filterTextInput, cmd = m.filterTextInput.Update(msg)
-	m.pageFirst()
+	if len(m.rows) > m.TotalRows() || prevTotalRows != m.TotalRows() || reset || blurred {
+		// filter did something
+		if m.maxTotalHeight > 0 {
+			// vertical scrolling mode
+			m.rowCursorIndex = 0
+			m.recalculateHeight()
+		}
+	}
+	if m.pageSize > 0 {
+		m.pageFirst()
+	}
 
 	return m, cmd
 }
@@ -92,11 +149,15 @@ func (m *Model) handleKeypress(msg tea.KeyMsg) {
 	}
 
 	if key.Matches(msg, m.keyMap.Filter) {
-		m.filterTextInput.Focus()
+		if m.filtered {
+			m.filterTextInput.Focus()
+		}
 	}
 
 	if key.Matches(msg, m.keyMap.FilterClear) {
-		m.filterTextInput.Reset()
+		if m.filtered {
+			m.filterTextInput.Reset()
+		}
 	}
 
 	if key.Matches(msg, m.keyMap.ScrollRight) {

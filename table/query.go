@@ -43,6 +43,12 @@ func (m Model) GetVisibleRows() []Row {
 	return rows
 }
 
+// GetTotalRowsUnfiltered returns the current total row count
+// before filtering.
+func (m *Model) GetTotalRowsUnfiltered() int {
+	return len(m.rows)
+}
+
 // GetHighlightedRowIndex returns the index of the Row that's currently highlighted
 // by the user.
 func (m *Model) GetHighlightedRowIndex() int {
